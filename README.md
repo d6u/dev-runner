@@ -37,7 +37,9 @@ interface Config {
     - `actionData: Object | (str: string) => Object` Predefined action object, or a function to generate action object based on matched input string.
     - `{type: 'ready'}` is a special action to notify following tasks current task is ready. It could be emitted multiple times.
 - `process?: (input: EventEmitter, output: EventEmitter) => void`: Run some custom code, e.g. live reload server.
-    - `input: EventEmitter`:
-    - `output: EventEmitter`:
+    - `input: EventEmitter`: all event will have a `type` key.
+        - `{type: 'ready'}`
+        - `{type: 'watch'; changeType: string; path: string}`: `changeType` can be "add", "change", "unlink".
+    - `output: EventEmitter`
 - `watch?: string[]`: emit file change event to `process`. Only works if `process` is defined.
 - `readyAfter?: number`: emit `{type: 'ready'}` action after `x` milliseconds.
