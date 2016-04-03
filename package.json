@@ -1,0 +1,38 @@
+{
+  "name": "dev-runner",
+  "version": "1.0.0",
+  "description": "A development task runner to start dev servers and other task runners in the order you want.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/d6u/dev-runner.git"
+  },
+  "keywords": [],
+  "author": "Daiwei Lu <daiweilu123@gmail.com> (http://daiwei.lu/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/d6u/dev-runner/issues"
+  },
+  "homepage": "https://github.com/d6u/dev-runner#readme",
+  "main": "index.js",
+  "files": [
+    "lib",
+    "src"
+  ],
+  "dependencies": {
+    "maxcon": "^2.1.0",
+    "rx": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^1.8.9",
+    "typings": "^0.7.11"
+  },
+  "scripts": {
+    "clean": "rm -rfv lib",
+    "pretest": "npm run build",
+    "test": "node test/index.js | tap-spec",
+    "build": "tsc",
+    "preversion": "npm test",
+    "postversion": "git push && git push --tags",
+    "prepublish": "typings install && npm run clean && npm run build"
+  }
+}

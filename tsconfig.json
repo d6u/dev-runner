@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es5",
+    "noImplicitAny": true,
+    "outDir": "lib",
+    "sourceMap": true
+  },
+  "files": [
+    "typings/main.d.ts",
+    "node_modules/rx/ts/rx.all.d.ts",
+    "src/index.ts"
+  ]
+}
