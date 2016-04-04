@@ -19,11 +19,18 @@
     "src"
   ],
   "dependencies": {
-    "maxcon": "^2.1.0",
+    "bluebird": "^3.3.4",
+    "maxcon": "^2.3.0",
+    "ramda": "~0.20.1",
     "rx": "^4.1.0"
   },
   "devDependencies": {
+    "proxyquire": "^1.7.4",
+    "tap-spec": "^4.1.1",
+    "tape": "^4.5.1",
+    "testdouble": "^1.4.0",
     "typescript": "^1.8.9",
+    "typescript-ramda": "git://github.com/donnut/typescript-ramda.git",
     "typings": "^0.7.11"
   },
   "scripts": {

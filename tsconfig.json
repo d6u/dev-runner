@@ -9,6 +9,7 @@
   "files": [
     "typings/main.d.ts",
     "node_modules/rx/ts/rx.all.d.ts",
+    "node_modules/typescript-ramda/ramda.d.ts",
     "src/index.ts"
   ]
 }

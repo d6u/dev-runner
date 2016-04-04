@@ -13,7 +13,7 @@ npm install --save-dev dev-runner
 ```typescript
 interface EventMatcher {
   regex: RegExp;
-  actionData: Object | (str: string) => Object;
+  actionData: Object | ((str: string) => Object);
 }
 
 interface Config {
@@ -22,7 +22,7 @@ interface Config {
     preStart?: string;
     start?: string;
     events?: EventMatcher[];
-    process?: (input: EventEmitter, output: EventEmitter) => void;
+    process?: ((input: EventEmitter, output: EventEmitter) => void);
     watch?: string[];
     readyAfter?: number;
   }
