@@ -1,6 +1,6 @@
 {
   "name": "dev-runner",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "A development task runner to start dev servers and other task runners in the order you want.",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
     "url": "https://github.com/d6u/dev-runner/issues"
   },
   "homepage": "https://github.com/d6u/dev-runner#readme",
-  "main": "index.js",
+  "main": "./lib/index.js",
   "files": [
     "lib",
     "src"
