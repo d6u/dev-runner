@@ -20,6 +20,10 @@ export function spawn(cmd: string): Observable<string> {
       observer.onNext(buffer.toString());
     });
 
+    child.on('exit', () => {
+      observer.onCompleted();
+    });
+
     return () => {
       console.log(`---> Stopping "${cmd}"`);
 
