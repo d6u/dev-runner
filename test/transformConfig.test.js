@@ -181,34 +181,176 @@ test('"transformConfig" emits action on "process" output', function (t) {
   });
 });
 
+test('"transformConfig" "ready" action from parent task triggers "start"', function (t) {
+  t.plan(2);
 
+  const funcA = td.function();
+  td.when(funcA(td.matchers.anything())).thenDo(() => new Rx.BehaviorSubject(null));
 
-// test('"transformConfig" listens to action on "process" input', function (t) {
-//   t.plan(2);
+  const transformConfig = proxyquire('../lib/utils', {
+    './ShellUtil': {
+      spawn: funcA
+    }
+  }).transformConfig;
 
-//   const funcA = td.function();
+  const r = transformConfig('taskName', {
+    dependsOn: ['a'],
+    start: 'command b'
+  });
 
-//   const transformConfig = proxyquire('../lib/utils', {
-//     './ShellUtil': {
-//       spawn: funcA
-//     }
-//   }).transformConfig;
+  const subject = new Rx.Subject();
 
-//   const r = transformConfig('taskName', {
-//     process(input, output) {
-//       output.emit('action', {
-//         type: 'test'
-//       });
-//     }
-//   });
+  r.process({a: subject}).subscribe(() => {});
 
-//   r.process({}).subscribe((action) => {
-//     t.deepEqual(action, {
-//       type: 'test'
-//     });
-//   });
+  t.doesNotThrow(() => {
+    td.verify(funcA(td.matchers.anything()), {times: 0, ignoreExtraArgs: true});
+  });
 
-//   t.doesNotThrow(() => {
-//     td.verify(funcA(td.matchers.anything()), {times: 0, ignoreExtraArgs: true});
-//   });
-// });
+  subject.onNext({type: 'ready'});
+
+  t.doesNotThrow(() => {
+    td.verify(funcA('command b'), {times: 1});
+  });
+});
+
+test('"transformConfig" "ready" action from all parent tasks triggers "start"', function (t) {
+  t.plan(3);
+
+  const funcA = td.function();
+  td.when(funcA(td.matchers.anything())).thenDo(() => new Rx.BehaviorSubject(null));
+
+  const transformConfig = proxyquire('../lib/utils', {
+    './ShellUtil': {
+      spawn: funcA
+    }
+  }).transformConfig;
+
+  const r = transformConfig('taskName', {
+    dependsOn: ['a', 'b'],
+    start: 'command b'
+  });
+
+  const subjectA = new Rx.Subject();
+  const subjectB = new Rx.Subject();
+
+  r.process({a: subjectA, b: subjectB}).subscribe(() => {});
+
+  t.doesNotThrow(() => {
+    td.verify(funcA(td.matchers.anything()), {times: 0, ignoreExtraArgs: true});
+  });
+
+  subjectA.onNext({type: 'ready'});
+
+  t.doesNotThrow(() => {
+    td.verify(funcA(td.matchers.anything()), {times: 0, ignoreExtraArgs: true});
+  });
+
+  subjectB.onNext({type: 'ready'});
+
+  t.doesNotThrow(() => {
+    td.verify(funcA('command b'), {times: 1});
+  });
+});
+
+test('"transformConfig" "ready" action from all parent tasks triggers "preStart"', function (t) {
+  t.plan(3);
+
+  const funcA = td.function();
+  td.when(funcA(td.matchers.anything())).thenDo(() => new Rx.Observable.just(null));
+
+  const transformConfig = proxyquire('../lib/utils', {
+    './ShellUtil': {
+      spawn: funcA
+    }
+  }).transformConfig;
+
+  const r = transformConfig('taskName', {
+    dependsOn: ['a', 'b'],
+    preStart: 'command a',
+    start: 'command b'
+  });
+
+  const subjectA = new Rx.Subject();
+  const subjectB = new Rx.Subject();
+
+  r.process({a: subjectA, b: subjectB}).subscribe(() => {});
+
+  t.doesNotThrow(() => {
+    td.verify(funcA(td.matchers.anything()), {times: 0, ignoreExtraArgs: true});
+  });
+
+  subjectA.onNext({type: 'ready'});
+
+  t.doesNotThrow(() => {
+    td.verify(funcA(td.matchers.anything()), {times: 0, ignoreExtraArgs: true});
+  });
+
+  subjectB.onNext({type: 'ready'});
+
+  t.doesNotThrow(() => {
+    td.verify(funcA('command a'), {times: 1});
+    td.verify(funcA('command b'), {times: 1});
+  });
+});
+
+test('"transformConfig" "ready" action from single parent task will respawn "start"', function (t) {
+  t.plan(2);
+
+  const funcA = td.function();
+  td.when(funcA(td.matchers.anything())).thenDo(() => new Rx.Observable.just(null));
+
+  const transformConfig = proxyquire('../lib/utils', {
+    './ShellUtil': {
+      spawn: funcA
+    }
+  }).transformConfig;
+
+  const r = transformConfig('taskName', {
+    dependsOn: ['a'],
+    start: 'command b'
+  });
+
+  const subjectA = new Rx.Subject();
+
+  r.process({a: subjectA}).subscribe(() => {});
+
+  subjectA.onNext({type: 'ready'});
+
+  t.doesNotThrow(() => {
+    td.verify(funcA('command b'), {times: 1});
+  });
+
+  subjectA.onNext({type: 'ready'});
+
+  t.doesNotThrow(() => {
+    td.verify(funcA('command b'), {times: 2});
+  });
+});
+
+test('"transformConfig" listens to action on "process" input', function (t) {
+  t.plan(1);
+
+  const funcA = td.function();
+
+  const transformConfig = proxyquire('../lib/utils', {
+    './ShellUtil': {
+      spawn: funcA
+    }
+  }).transformConfig;
+
+  const subjectA = new Rx.Subject();
+
+  const r = transformConfig('taskName', {
+    dependsOn: ['a'],
+    process(input, output) {
+      input.on('action', (action) => {
+        t.deepEqual(action, {type: 'action'});
+      });
+    }
+  });
+
+  r.process({a: subjectA}).subscribe(() => {});
+
+  subjectA.onNext({type: 'ready'});
+  subjectA.onNext({type: 'action'});
+});
