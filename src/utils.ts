@@ -4,12 +4,12 @@ import * as Promise from 'bluebird';
 import {toPairs, values, pipe, map, propEq} from 'ramda';
 import {spawn} from './ShellUtil';
 
-interface EventMatcher {
+export interface EventMatcher {
   regex: RegExp;
   actionData: Object | ((str: string) => Object);
 }
 
-interface TaskConfig {
+export interface DevRunnerTaskConfig {
   dependsOn?: string[];
   preStart?: string;
   start?: string;
@@ -20,10 +20,10 @@ interface TaskConfig {
 }
 
 export interface Configs {
-  [key: string]: TaskConfig;
+  [key: string]: DevRunnerTaskConfig;
 }
 
-interface TransformedTaskConfig {
+export interface TransformedTaskConfig {
   dependsOn?: string[];
   process: ((tasks: {[key: string]: Observable<any>}) => Observable<any>);
 }
@@ -42,7 +42,7 @@ export function transformConfigs(configs: Configs): TransformedConfigs {
   return transformConfigs;
 }
 
-export function transformConfig(key: string, config: TaskConfig): TransformedTaskConfig {
+export function transformConfig(key: string, config: DevRunnerTaskConfig): TransformedTaskConfig {
   const {dependsOn, preStart, start, events, process, watch, readyAfter} = config;
 
   if (start && process) {

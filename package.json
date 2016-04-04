@@ -14,13 +14,14 @@
   },
   "homepage": "https://github.com/d6u/dev-runner#readme",
   "main": "./lib/index.js",
+  "typings": "./lib/index.d.js",
   "files": [
     "lib",
     "src"
   ],
   "dependencies": {
     "bluebird": "^3.3.4",
-    "maxcon": "^2.3.0",
+    "maxcon": "^2.4.0",
     "ramda": "~0.20.1",
     "rx": "^4.1.0"
   },

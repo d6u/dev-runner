@@ -1,3 +1,1 @@
-import DevRunner from './DevRunner';
-
-module.exports = DevRunner;
+export {default as DevRunner} from './DevRunner';

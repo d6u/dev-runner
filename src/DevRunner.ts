@@ -1,5 +1,5 @@
 import {EventEmitter} from 'events';
-import Maxcon from 'maxcon';
+import {Maxcon} from 'maxcon';
 import {Configs, TransformedConfigs, transformConfigs} from './utils';
 
 export default class DevRunner {
