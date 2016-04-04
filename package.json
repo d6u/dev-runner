@@ -1,6 +1,6 @@
 {
   "name": "dev-runner",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A development task runner to start dev servers and other task runners in the order you want.",
   "repository": {
     "type": "git",
