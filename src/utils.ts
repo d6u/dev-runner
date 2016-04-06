@@ -74,9 +74,9 @@ export function transformConfig(key: string, config: DevRunnerTaskConfig): Trans
         if (parents.length) {
           readyObservables = parents.map(s => s.filter(propEq('type', 'ready')));
           const allReadyObservable = Observable
-            .combineLatest.apply(null, readyObservables)
+            .combineLatest(readyObservables, null)
             .take(1)
-            .filter(always(false)); // Only need completed event
+            .ignoreElements() as Observable<Action>;
 
           observableCandidates.push(allReadyObservable);
         }
@@ -85,9 +85,9 @@ export function transformConfig(key: string, config: DevRunnerTaskConfig): Trans
           const preStartObservable = spawn(preStart);
 
           if (match) {
-            observableCandidates.push(preStartObservable.map(match).filter(identity));
+            observableCandidates.push(preStartObservable.map(match).filter(identity) as Observable<Action>);
           } else {
-            observableCandidates.push(preStartObservable.filter(always(false)));
+            observableCandidates.push(preStartObservable.ignoreElements());
           }
         }
 
@@ -104,9 +104,9 @@ export function transformConfig(key: string, config: DevRunnerTaskConfig): Trans
           }
 
           if (match) {
-            observableCandidates.push(startObservable.map(match).filter(identity));
+            observableCandidates.push(startObservable.map(match).filter(identity) as Observable<Action>);
           } else {
-            observableCandidates.push(startObservable.filter(always(false)));
+            observableCandidates.push(startObservable.ignoreElements());
           }
         } else { // "process"
           const processObservable = Observable.create<Action>((observer) => {
