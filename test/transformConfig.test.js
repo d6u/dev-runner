@@ -5,6 +5,8 @@ const proxyquire = require('proxyquire').noCallThru();
 const td = require('testdouble');
 const Rx = require('rx');
 
+const anything = td.matchers.anything;
+
 test('"transformConfig" throws if both start and process are defined', function (t) {
   t.plan(1);
 
@@ -256,11 +258,15 @@ test('"transformConfig" "ready" action from all parent tasks triggers "preStart"
   t.plan(3);
 
   const funcA = td.function();
-  td.when(funcA(td.matchers.anything())).thenDo(() => new Rx.Observable.just(null));
 
   const transformConfig = proxyquire('../lib/utils', {
     './ShellUtil': {
-      spawn: funcA
+      spawn(cmd) {
+        return Rx.Observable.create((observer) => {
+          funcA(cmd);
+          observer.onCompleted();
+        });
+      }
     }
   }).transformConfig;
 
@@ -276,13 +282,13 @@ test('"transformConfig" "ready" action from all parent tasks triggers "preStart"
   r.process({a: subjectA, b: subjectB}).subscribe(() => {});
 
   t.doesNotThrow(() => {
-    td.verify(funcA(td.matchers.anything()), {times: 0, ignoreExtraArgs: true});
+    td.verify(funcA(anything()), {times: 0, ignoreExtraArgs: true});
   });
 
   subjectA.onNext({type: 'ready'});
 
   t.doesNotThrow(() => {
-    td.verify(funcA(td.matchers.anything()), {times: 0, ignoreExtraArgs: true});
+    td.verify(funcA(anything()), {times: 0, ignoreExtraArgs: true});
   });
 
   subjectB.onNext({type: 'ready'});
@@ -330,12 +336,8 @@ test('"transformConfig" "ready" action from single parent task will respawn "sta
 test('"transformConfig" listens to action on "process" input', function (t) {
   t.plan(1);
 
-  const funcA = td.function();
-
   const transformConfig = proxyquire('../lib/utils', {
-    './ShellUtil': {
-      spawn: funcA
-    }
+    './ShellUtil': {}
   }).transformConfig;
 
   const subjectA = new Rx.Subject();

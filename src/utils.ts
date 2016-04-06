@@ -1,7 +1,7 @@
 import {EventEmitter} from 'events';
 import {Observable, ConnectableObservable, Observer, CompositeDisposable, Disposable} from 'rx';
 import * as Promise from 'bluebird';
-import {toPairs, values, pipe, map, propEq} from 'ramda';
+import {toPairs, values, pipe, map, propEq, always, identity} from 'ramda';
 import {spawn} from './ShellUtil';
 
 export interface EventMatcher {
@@ -42,6 +42,10 @@ export function transformConfigs(configs: Configs): TransformedConfigs {
   return transformConfigs;
 }
 
+interface Action {
+  type: string;
+}
+
 export function transformConfig(key: string, config: DevRunnerTaskConfig): TransformedTaskConfig {
   const {dependsOn, preStart, start, events, process, watch, readyAfter} = config;
 
@@ -55,102 +59,96 @@ export function transformConfig(key: string, config: DevRunnerTaskConfig): Trans
 
   return {
     dependsOn,
-    process(tasks: {[key: string]: Observable<any>}): Observable<Object> {
-      return Observable.create((observer: Observer<Object>) => {
+    process(tasks: {[key: string]: Observable<Action>}) {
+      return Observable.create<Action>((observer) => {
+        const parents = values(tasks).map(s => s.publish());
         const match = events ? matchEvents(events) : null;
-        const bag = new CompositeDisposable();
-        const observerables: Observable<any>[] = values(tasks);
 
-        let s1: Observable<any>;
-        let connectables: ConnectableObservable<any>[];
-        let readyActionObservables: Observable<{type: 'ready'}>[];
+        // Should be Observable<Action> type, because for observables
+        // that doesn't emit Actions, we only take the completed event
+        // Use <any> as a workaround
+        const observableCandidates: Observable<any>[] = [];
 
-        if (observerables.length) {
-          connectables = observerables.map((s) => s.publish());
-          readyActionObservables =
-            connectables.map((s) => s.filter(propEq('type', 'ready')));
+        let readyObservables: Observable<Action>[];
 
-          const allParentsReady: Observable<{type: 'ready'}[]> =
-            Observable.combineLatest.apply(null, readyActionObservables).take(1);
+        if (parents.length) {
+          readyObservables = parents.map(s => s.filter(propEq('type', 'ready')));
+          const allReadyObservable = Observable
+            .combineLatest.apply(null, readyObservables)
+            .take(1)
+            .filter(always(false)); // Only need completed event
 
-          s1 = allParentsReady;
-        } else {
-          s1 = Observable.just(null);
+          observableCandidates.push(allReadyObservable);
         }
 
         if (preStart) {
-          s1 = s1.flatMap(() => spawn(preStart));
+          const preStartObservable = spawn(preStart);
 
           if (match) {
-            s1 = s1.doOnNext((val: string) => {
-              const action = match(val);
-              if (action) {
-                observer.onNext(action);
-              }
-            });
+            observableCandidates.push(preStartObservable.map(match).filter(identity));
+          } else {
+            observableCandidates.push(preStartObservable.filter(always(false)));
           }
         }
 
-        let input: EventEmitter;
-        let output: EventEmitter;
+        if (start) {
+          let startObservable: Observable<string>;
 
-        bag.add(s1.subscribeOnCompleted(() => {
-          if (start) {
-            let s2: Observable<string>;
+          if (readyObservables) {
+            startObservable = Observable
+              .merge(...readyObservables)
+              .startWith(null)
+              .flatMapLatest(() => spawn(start));
+          } else {
+            startObservable = spawn(start);
+          }
 
-            if (readyActionObservables) {
-              s2 = Observable
-                .merge
-                .apply(null, readyActionObservables)
-                .startWith(null)
-                .flatMapLatest(() => spawn(start));
-            } else {
-              s2 = spawn(start);
-            }
+          if (match) {
+            observableCandidates.push(startObservable.map(match).filter(identity));
+          } else {
+            observableCandidates.push(startObservable.filter(always(false)));
+          }
+        } else { // "process"
+          const processObservable = Observable.create<Action>((observer) => {
+            const input = new EventEmitter();
+            const output = new EventEmitter();
 
-            let d: Disposable;
-
-            if (match) {
-              d = s2.subscribeOnNext((val) => {
-                const action = match(val);
-                if (action) {
-                  observer.onNext(action);
-                }
-              });
-            } else {
-              d = s2.subscribe(() => {});
-            }
-
-            bag.add(d);
-          } else { // "process"
-            input = new EventEmitter();
-            output = new EventEmitter();
-
-            output.on('action', (obj: Object) => {
+            output.on('action', (obj: Action) => {
               observer.onNext(obj);
             });
 
             process(input, output);
 
-            const d = Observable.merge.apply(null, connectables)
-              .subscribeOnNext((action: Object) => input.emit('action', action));
+            let disposable: Disposable;
 
-            bag.add(d);
-          }
-        }));
+            if (parents.length) {
+              disposable = Observable
+                .merge(...parents)
+                .subscribeOnNext((action: Action) => input.emit('action', action));
+            }
 
-        if (connectables) {
-          connectables.forEach((s) => bag.add(s.connect()));
+            return () => {
+              if (disposable) {
+                disposable.dispose();
+              }
+              input.removeAllListeners();
+              output.removeAllListeners();
+            };
+          });
+
+          observableCandidates.push(processObservable);
+        }
+
+        const bag = new CompositeDisposable();
+
+        bag.add(Observable.concat(...observableCandidates).subscribe(observer));
+
+        if (parents.length) {
+          parents.forEach(s => bag.add(s.connect()));
         }
 
         return () => {
           bag.dispose();
-          if (input) {
-            input.removeAllListeners();
-          }
-          if (output) {
-            output.removeAllListeners();
-          }
         };
       });
     }
